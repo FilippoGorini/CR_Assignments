@@ -7,15 +7,14 @@ clc; clear; close all;
 
 % Simulation parameters
 dt       = 0.05;            % Prima era 0.005
-endTime  = 120;
+endTime  = 50;
 % Initialize robot model and simulator
 robotModel = UvmsModel();          
 sim = UvmsSim(dt, robotModel, endTime);
 % Initialize Unity interface
 unity = UnityInterface("127.0.0.1");
 
-% Define tasks
-%task_vehicle = TaskVehicle();  
+% Define tasks 
 % task_tool    = TaskTool();      % Only 1 task for now
 % task_set = {task_tool};
 task_vehicle_pos = TaskVehiclePos();
@@ -43,10 +42,21 @@ for step = 1:sim.maxSteps
     robotModel.altitude = unity.receiveAltitude(robotModel);
 
     % 2. Compute control commands for current action
-    [q_dot, v_nu] = actionManager.computeICAT(robotModel);
+    [v_nu, q_dot] = actionManager.computeICAT(robotModel);
+    % NB: I swapped the order of v_nu and q_dot to match the function's
+    % output
+
+% DEBUG: set a fixed vertical velocity in place of the
+% The altitude feedback from unity should change and increase
+% accordingly but it doesn't, it stays fixed at the initial value
+% (3.25 m) or changes very slowly wrt to the real one.
+    % q_dot = zeros(7,1);
+    % v_nu = [0, 0, 0.5, 0, 0, 0]';
 
     % 3. Step the simulator (integrate velocities)
-    sim.step(q_dot, v_nu);
+    sim.step(v_nu, q_dot);
+    % NB: I swapped the order of v_nu and q_dot again to match the function
+    % input
 
     % 4. Send updated state to Unity
     unity.send(robotModel);

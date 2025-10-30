@@ -18,7 +18,7 @@ classdef TaskTool < Task
             % Following stuff is projected on the vehicle
             Jt_a  = Ste * [robot.vTb(1:3,1:3) zeros(3,3); zeros(3,3) robot.vTb(1:3,1:3)] * bJe;
             Jt_v = [zeros(3) eye(3); eye(3) -skew(robot.vTt(1:3,4))];
-            obj.J = [Jt_a Jt_v]
+            obj.J = [Jt_a Jt_v];
         end
         
         function updateActivation(obj, robot)

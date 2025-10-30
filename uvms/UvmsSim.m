@@ -21,7 +21,7 @@ classdef UvmsSim < handle
             obj.maxSteps = ceil(endTime/dt);
         end
 
-        function step(obj, v_nu, q_dot)
+        function step(obj, v_nu, q_dot)  
             % update the state in the robot object
             obj.robot.q_dot = q_dot;
             obj.robot.v_nu = v_nu;
