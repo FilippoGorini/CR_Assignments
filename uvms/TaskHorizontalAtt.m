@@ -2,6 +2,9 @@ classdef TaskHorizontalAtt < Task
     properties
         n
         theta
+        % theta_star is the goal for the equivalent equality task
+        theta_star = 0.1
+        theta_full_activation = 0.2
     end
 
 
@@ -14,11 +17,9 @@ classdef TaskHorizontalAtt < Task
             wRv = robot.wTv(1:3, 1:3);
             % Get axis angle representation equivalent (n*theta = rho)
             [obj.n, obj.theta] = RotToAngleAxis(wRv);
-            % theta_star is the goal for the equivalent equality task
-            theta_star = 0.1;
             % Get reference rate by multiplying gain (0.2) by error between
             % theta_star and theta
-            obj.xdotbar = 0.2 * (theta_star - obj.theta);
+            obj.xdotbar = 0.2 * (obj.theta_star - obj.theta);
             % limit the requested velocities...
             obj.xdotbar = Saturate(obj.xdotbar, 0.2);
         end
@@ -27,7 +28,7 @@ classdef TaskHorizontalAtt < Task
         end
         
         function updateActivation(obj, robot)
-            obj.A = IncreasingBellShapedFunction(0.1, 0.2, 0, 1, obj.theta);
+            obj.A = IncreasingBellShapedFunction(obj.theta_star, obj.theta_full_activation, 0, 1, obj.theta);
         end
     end
 end
