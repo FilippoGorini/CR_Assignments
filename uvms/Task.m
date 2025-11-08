@@ -3,7 +3,7 @@ classdef Task < handle
     properties
         xdotbar = [] % reference task velocity
         J = []       % task Jacobian
-        A = []       % task internal activation function (the result actually)
+        A = []       % task internal activation function
     end
 
     methods (Abstract)

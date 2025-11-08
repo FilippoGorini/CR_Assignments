@@ -68,10 +68,10 @@ classdef UnityInterface < handle
 
             if obj.uAltitude.NumDatagramsAvailable > 0
                 % Read all available datagrams
-                dgrams = read(obj.uAltitude, obj.uAltitude.NumDatagramsAvailable, "uint8");
+                dgrams = read(obj.uAltitude, obj.uAltitude.NumDatagramsAvailable, "single");
 
                 % Convert last datagram back to single
-                latestData = typecast(dgrams(end).Data, 'single');
+                latestData = typecast(dgrams(end).Data, 'double');
                 sensorDistance = latestData(end);  % last float
 
                 % Transform to world frame

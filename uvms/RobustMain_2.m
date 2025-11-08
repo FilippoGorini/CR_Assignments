@@ -9,16 +9,18 @@ clc; clear; close all;
 dt       = 0.05;            % Prima era 0.005
 endTime  = 50;
 % Initialize robot model and simulator
-robotModel = UvmsModel();          
+robotModel = UvmsModel(); 
+% Set initial conditions
+robotModel.eta = [10.5 35.5 -36 -pi/3 pi/3 pi/2]';
+% Create sim object
 sim = UvmsSim(dt, robotModel, endTime);
 % Initialize Unity interface
 unity = UnityInterface("127.0.0.1");
 
 % Define tasks 
-% task_tool    = TaskTool();      % Only 1 task for now
-% task_set = {task_tool};
+task_horizontal_att = TaskHorizontalAtt();
 task_vehicle_pos = TaskVehiclePos();
-task_set = {task_vehicle_pos};         % The order in which I place the tasks sets the priority
+task_set = {task_vehicle_pos, task_horizontal_att};         % The order in which I place the tasks sets the priority
 
 % Define actions and add to ActionManager
 actionManager = ActionManager();
@@ -27,7 +29,7 @@ actionManager.addAction(task_set);  % action 1
 % Define desired positions and orientations (world frame)
 w_arm_goal_position = [12.2025, 37.3748, -39.8860]';
 w_arm_goal_orientation = [0, pi, pi/2];
-w_vehicle_goal_position = [10.5 37.5 -38]';
+w_vehicle_goal_position = [10.5, 37.5, -38]';
 w_vehicle_goal_orientation = [0, 0, 0];
 
 % Set goals in the robot model
@@ -43,20 +45,9 @@ for step = 1:sim.maxSteps
 
     % 2. Compute control commands for current action
     [v_nu, q_dot] = actionManager.computeICAT(robotModel);
-    % NB: I swapped the order of v_nu and q_dot to match the function's
-    % output
-
-% DEBUG: set a fixed vertical velocity in place of the
-% The altitude feedback from unity should change and increase
-% accordingly but it doesn't, it stays fixed at the initial value
-% (3.25 m) or changes very slowly wrt to the real one.
-    % q_dot = zeros(7,1);
-    % v_nu = [0, 0, 0.5, 0, 0, 0]';
 
     % 3. Step the simulator (integrate velocities)
     sim.step(v_nu, q_dot);
-    % NB: I swapped the order of v_nu and q_dot again to match the function
-    % input
 
     % 4. Send updated state to Unity
     unity.send(robotModel);

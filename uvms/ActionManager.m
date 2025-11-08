@@ -21,10 +21,6 @@ classdef ActionManager < handle
                 tasks{i}.updateActivation(robot);
             end
 
-            % If we need to pass more arguments, we can call the specific
-            % task's method, for example:
-                % TaskTool.updateReference(robot, ADDITIONAL ARGS)
-
             % 2. Perform ICAT (task-priority inverse kinematics)
             ydotbar = zeros(13,1);
             Qp = eye(13);
