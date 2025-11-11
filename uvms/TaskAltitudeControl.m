@@ -4,6 +4,7 @@ classdef TaskAltitudeControl < Task
         % h_star is the goal for the equivalent equality task
         h_star = 1.5;
         h_full_activation = 1
+        gain = 0.2
     end
 
 
@@ -12,7 +13,7 @@ classdef TaskAltitudeControl < Task
             obj.h = robot.altitude;
             % Get reference rate by multiplying gain (0.2) by error between
             % h_star and h
-            obj.xdotbar = 0.2 * (obj.h_star - obj.h);
+            obj.xdotbar = obj.gain * (obj.h_star - obj.h);
             % limit the requested velocities...
             obj.xdotbar = Saturate(obj.xdotbar, 0.2);
         end

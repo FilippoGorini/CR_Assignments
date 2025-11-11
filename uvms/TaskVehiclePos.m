@@ -1,6 +1,6 @@
 classdef TaskVehiclePos < Task   
     properties
-
+        gain = 0.2
     end
 
 
@@ -9,9 +9,9 @@ classdef TaskVehiclePos < Task
             % In this task our control variable x is the cartesian distance
             % only (no orientation), so it is a 3x1 vector, therefore xdot
             % is 3x1 as well.
-            [~, v_lin] = CartError(robot.wTgv , robot.wTv);
+            [~, w_lin_err] = CartError(robot.wTgv , robot.wTv);
             % lambda = 0.2 gain
-            obj.xdotbar = - 0.2 * v_lin;  % we should also consider the velocity of the goal if it was moving (feedforward term)
+            obj.xdotbar = - obj.gain * w_lin_err;  % we should also consider the velocity of the goal if it was moving (feedforward term)
             % limit the requested velocities...
             obj.xdotbar(1:3) = Saturate(obj.xdotbar(1:3), 0.2);
         end

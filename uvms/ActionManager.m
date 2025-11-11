@@ -2,6 +2,8 @@ classdef ActionManager < handle
     properties
         actions = {}      % cell array of actions (each action = stack of tasks)
         currentAction = 1 % index of currently active action
+        % previousAction = 0 % index of the previously active action
+        % timeInCurrentAction = 0 % Time elapsed since setCurrentAction was called
     end
 
     methods

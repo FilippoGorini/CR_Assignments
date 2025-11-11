@@ -5,6 +5,7 @@ classdef TaskHorizontalAtt < Task
         % theta_star is the goal for the equivalent equality task
         theta_star = 0.1
         theta_full_activation = 0.2
+        gain = 0.2
     end
 
 
@@ -19,7 +20,7 @@ classdef TaskHorizontalAtt < Task
             [obj.n, obj.theta] = RotToAngleAxis(wRv);
             % Get reference rate by multiplying gain (0.2) by error between
             % theta_star and theta
-            obj.xdotbar = 0.2 * (obj.theta_star - obj.theta);
+            obj.xdotbar = obj.gain * (obj.theta_star - obj.theta);
             % limit the requested velocities...
             obj.xdotbar = Saturate(obj.xdotbar, 0.2);
         end
