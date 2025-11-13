@@ -7,7 +7,7 @@ clc; clear; close all;
 
 % Simulation parameters
 dt       = 0.05;            % Prima era 0.005
-endTime  = 120;
+endTime  = 200;
 % Initialize robot model and simulator
 robotModel = UvmsModel(); 
 % Set initial conditions
@@ -19,10 +19,15 @@ unity = UnityInterface("127.0.0.1");
 
 % Define tasks 
 task_vehicle_pos = TaskVehiclePos();
-task_vehicle_att = TaskVehicleAtt();
+task_vehicle_orient = TaskVehicleOrient();
 task_horizontal_att = TaskHorizontalAtt();
-task_altitude_control = TaskAltitudeControl();
-task_set = {task_altitude_control, task_vehicle_pos, task_vehicle_att, task_horizontal_att};         % The order in which I place the tasks sets the priority
+task_altitude_min = TaskAltitudeControl(1);
+task_altitude_min.set_h_min(1);
+task_altitude_landing = TaskAltitudeControl(0);
+task_altitude_landing.set_h_star(0);
+
+task_set = {task_altitude_min, task_vehicle_pos, task_vehicle_orient, task_horizontal_att};
+% task_set = {task_altitude_landing, task_vehicle_pos, task_horizontal_att};
 
 % Define actions and add to ActionManager
 actionManager = ActionManager();
@@ -49,7 +54,7 @@ for step = 1:sim.maxSteps
     % In the first few loops the altitude is not yet received from
     % unity so this leads to an empty activation, so we skip the ICAT
     % for the first 0.5 seconds
-    if step * dt > 0.5
+    if step * dt > 1
         [v_nu, q_dot] = actionManager.computeICAT(robotModel);
     else
         v_nu = zeros(6,1);
@@ -70,9 +75,9 @@ for step = 1:sim.maxSteps
         fprintf('t = %.2f s\n', sim.time);
         fprintf('alt = %.2f m\n', robotModel.altitude);
         [~, lin_pos_error] = CartError(robotModel.wTgv , robotModel.wTv);
-        fprintf('lin_pos_error = %.4f m\n', lin_pos_error);
+        fprintf('lin_pos_error = %.8f m\n', lin_pos_error);
         [w_ang_err, ~] = CartError(robotModel.wTv, robotModel.wTgv);
-        fprintf('ang_att_error = %.4f rad\n', w_ang_err);
+        fprintf('ang_orient_error = %.8f rad\n', w_ang_err);
     end
 
     % 7. Optional real-time slowdown

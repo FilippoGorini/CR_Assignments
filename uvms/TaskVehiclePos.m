@@ -1,6 +1,6 @@
 classdef TaskVehiclePos < Task   
     properties
-        gain = 0.2
+        gain = 0.4
     end
 
 
