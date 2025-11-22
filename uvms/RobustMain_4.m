@@ -26,12 +26,20 @@ task_altitude_min.set_h_min(1);
 task_altitude_landing = TaskAltitudeControl(0);
 task_altitude_landing.set_h_star(0);
 
-task_set = {task_altitude_min, task_vehicle_pos, task_vehicle_orient, task_horizontal_att};
-% task_set = {task_altitude_landing, task_vehicle_pos, task_horizontal_att};
-
+action_safe_navigation = {task_altitude_min, task_vehicle_pos, task_vehicle_orient, task_horizontal_att};
+action_landing = {task_altitude_landing, task_vehicle_pos, task_horizontal_att};
+global_task_set = {task_altitude_min, ...
+                            task_altitude_landing, ...
+                            task_vehicle_pos, ...
+                            task_vehicle_orient, ...
+                            task_horizontal_att};
 % Define actions and add to ActionManager
 actionManager = ActionManager();
-actionManager.addAction(task_set); 
+actionManager.addTaskSet(global_task_set)
+actionManager.addAction(action_safe_navigation); 
+actionManager.addAction(action_landing); 
+actionManager.currentAction(1);
+
 
 % Define desired positions and orientations (world frame)
 w_arm_goal_position = [12.2025, 37.3748, -39.8860]';
@@ -43,7 +51,7 @@ w_vehicle_goal_orientation = [0, 0, 0];
 robotModel.setGoal(w_arm_goal_position, w_arm_goal_orientation, w_vehicle_goal_position, w_vehicle_goal_orientation);
 
 % Initialize the logger
-logger = SimulationLogger(ceil(endTime/dt)+1, robotModel, task_set);
+logger = SimulationLogger(ceil(endTime/dt)+1, robotModel, action_safe_navigation);
 
 % Main simulation loop
 for step = 1:sim.maxSteps
