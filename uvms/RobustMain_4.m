@@ -26,19 +26,23 @@ task_altitude_min.set_h_min(1);
 task_altitude_landing = TaskAltitudeControl(0);
 task_altitude_landing.set_h_star(0);
 
+% Define actions and add to ActionManager
 action_safe_navigation = {task_altitude_min, task_vehicle_pos, task_vehicle_orient, task_horizontal_att};
 action_landing = {task_altitude_landing, task_vehicle_pos, task_horizontal_att};
-global_task_set = {task_altitude_min, ...
+% The priorities now are defined by the order in the global_task_set, not
+% in the single actions anymore
+global_task_set = {task_altitude_min, ...       
                             task_altitude_landing, ...
                             task_vehicle_pos, ...
                             task_vehicle_orient, ...
                             task_horizontal_att};
-% Define actions and add to ActionManager
+
+% Define ActionManager and add global_task_set and actions
 actionManager = ActionManager();
 actionManager.addTaskSet(global_task_set)
 actionManager.addAction(action_safe_navigation); 
 actionManager.addAction(action_landing); 
-actionManager.currentAction(1);
+actionManager.currentAction(1);         % Set initial action
 
 
 % Define desired positions and orientations (world frame)
@@ -47,16 +51,31 @@ w_arm_goal_orientation = [0, pi, pi/2];
 w_vehicle_goal_position = [50 -12.5 -33]';  
 w_vehicle_goal_orientation = [0, 0, 0];
 
+% Define error thresholds for safe navigation and landing flag
+ang_error_threshold = 0.02;
+lin_error_threshold = 0.05;
+is_landing = false;
+
 % Set goals in the robot model
 robotModel.setGoal(w_arm_goal_position, w_arm_goal_orientation, w_vehicle_goal_position, w_vehicle_goal_orientation);
 
 % Initialize the logger
-logger = SimulationLogger(ceil(endTime/dt)+1, robotModel, action_safe_navigation);
+logger = SimulationLogger(ceil(endTime/dt)+1, robotModel, global_task_set);
 
 % Main simulation loop
 for step = 1:sim.maxSteps
     % 1. Receive altitude from Unity
     robotModel.altitude = unity.receiveAltitude(robotModel);
+    
+    % If we completed the safe_navigation action, switch to the landing action
+    [vehicle_ang_error, vehicle_lin_error] = CartError(robotModel.wTgv , robotModel.wTv);
+    if norm(vehicle_ang_error) < ang_error_threshold && ...
+       norm(vehicle_lin_error) < lin_error_threshold && ...
+       is_landing == false 
+        
+        actionManager.setCurrentAction(2);
+        is_landing = true; 
+    end
 
     % 2. Compute control commands for current action
     % In the first few loops the altitude is not yet received from
@@ -82,14 +101,17 @@ for step = 1:sim.maxSteps
     if mod(sim.loopCounter, round(1 / sim.dt)) == 0
         fprintf('t = %.2f s\n', sim.time);
         fprintf('alt = %.2f m\n', robotModel.altitude);
-        [~, lin_pos_error] = CartError(robotModel.wTgv , robotModel.wTv);
-        fprintf('lin_pos_error = %.8f m\n', lin_pos_error);
-        [w_ang_err, ~] = CartError(robotModel.wTv, robotModel.wTgv);
-        fprintf('ang_orient_error = %.8f rad\n', w_ang_err);
+        if is_landing == false
+            disp('Current action: Safe Navigation')
+            fprintf('Vehicle position error = %.8f m\n', norm(vehicle_lin_error));
+            fprintf('Vehicle orientation error = %.8f rad\n', norm(vehicle_ang_error));
+        else
+            disp('Current action: Landing')
+        end
     end
 
     % 7. Optional real-time slowdown
-    SlowdownToRealtime(dt);
+    % SlowdownToRealtime(dt);
 end
 
 % Display plots

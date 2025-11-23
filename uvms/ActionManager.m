@@ -6,7 +6,7 @@ classdef ActionManager < handle
         currentAction = 1       % index of currently active action
         previousAction = 1      % index of the previously active action
         timeInCurrentAction = 0 % Time elapsed since setCurrentAction was called
-        transitionDuration = 2  % 2 second transition time between actions
+        transitionDuration = 5  % 2 second transition time between actions
     end
 
     methods
