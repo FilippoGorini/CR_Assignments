@@ -19,7 +19,10 @@ function main()
     %Initiliaze panda_arm() Class, specifying the base offset w.r.t World Frame
     arm1 = panda_arm(model, eye(4));
     %TO DO: TRANSFORMATION MATRIX FROM WORLD FRAME TO RIGHT ARM BASE FRAME
-    wTb2 = eye(4);
+    wTb2 = [-1  0   0   1.06;
+            0   -1  0   -0.01;
+            0   0   1   0;
+            0   0   0   1];
     arm2 = panda_arm(model, wTb2);
 
     %Initialize Bimanual Simulator Class

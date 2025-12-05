@@ -51,13 +51,17 @@ classdef panda_arm < handle
             obj.jlmax=[2.8973;1.7628;2.8973;-0.0698;2.8973;3.7525;2.8973];
 
             % FIXED END EFFECTOR
-            theta = -44.9949;% FIXED ANGLE BETWEEN EE AND TOOL 
-            tool_length = 0.2124;% FIXED DISTANCE BETWEEN EE AND TOOL
-
+            % frame e = frame f = frame 8
+            psi = -44.9949;% FIXED ANGLE BETWEEN EE AND TOOL 
+            tool_length = 0.2104;% FIXED DISTANCE BETWEEN EE AND TOOL
+            
+            eRt = YPRToRot(psi, 0, 0);
+            eOt = [0 0 tool_length]';
             % TO DO: Define trasnformation matrix from ee to tool, and
             % transformation from world frame to tool
-            obj.eTt = eye(4);
-            obj.wTt = obj.wTe;
+            obj.eTt = [eRt,         eOt;
+                       zeros(1,3),  1];
+            obj.wTt = obj.wTe * obj.eTt;
           
         end
 

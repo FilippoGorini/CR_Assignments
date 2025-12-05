@@ -45,27 +45,35 @@ classdef ActionManager < handle
                 end
                 
                 % Determine task status
-                status = "INACTIVE";
+                trans_act = 0;
                 if ~inPrevious && inCurrent
-                    status = "FADING_IN";           % Task turns ON (0 -> 1)
+                    trans_act = IncreasingBellShapedFunction(0, ...
+                                                            obj.transitionDuration, ...
+                                                            0, ...
+                                                            1, ...
+                                                            obj.timeInCurrentAction);
                 elseif inPrevious && ~inCurrent
-                    status = "FADING_OUT";          % Task turns OFF (1 -> 0)
+                    trans_act = DecreasingBellShapedFunction(0, ...
+                                                            obj.transitionDuration, ...
+                                                            0, ...
+                                                            1, ...
+                                                            obj.timeInCurrentAction);
                 elseif inPrevious && inCurrent
-                    status = "ACTIVE";
+                    trans_act = 1;
                 end
                 
+                % Update tasks
+                task.updateReference(robot);
+                task.updateJacobian(robot);
+                task.updateActivation(robot);
+                
                 % If inactive, we can skip computation to save some time
-                if strcmp(status, "INACTIVE")
+                if trans_act == 0
                     continue; 
                 end
                 
-                % Update task if it is active
-                task.updateReference(robot);
-                task.updateJacobian(robot);
-                task.updateActivation(robot, status, obj.timeInCurrentAction, obj.transitionDuration);
-                
                 % Perform ICAT Step
-                [Qp, ydotbar] = iCAT_task(task.A, task.J, ...
+                [Qp, ydotbar] = iCAT_task(trans_act*task.A, task.J, ...
                                            Qp, ydotbar, task.xdotbar, ...
                                            1e-4, 0.01, 10);
             end

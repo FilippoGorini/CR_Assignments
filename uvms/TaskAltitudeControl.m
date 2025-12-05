@@ -29,7 +29,7 @@ classdef TaskAltitudeControl < Task
             obj.J = [zeros(1,7) 0 0 1 0 0 0];
         end
 
-        function updateActivation(obj, robot, task_status, time_elapsed, transition_time)
+        function updateActivation(obj, robot)
 
             % Update the task's inherent activation
             if obj.type == 0
@@ -37,13 +37,6 @@ classdef TaskAltitudeControl < Task
             else
                 obj.A = DecreasingBellShapedFunction(obj.h_full_activation, obj.h_star, 0, 1, obj.h);
             end   
-
-            % Update the activation depending on the task status
-            if task_status == "FADING_IN"
-                obj.A = IncreasingBellShapedFunction(0, transition_time, 0, 1, time_elapsed) * obj.A;
-            elseif task_status == "FADING_OUT"
-                obj.A = DecreasingBellShapedFunction(0, transition_time, 0, 1, time_elapsed) * obj.A;
-            end
 
         end
 

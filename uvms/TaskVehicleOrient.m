@@ -21,15 +21,9 @@ classdef TaskVehicleOrient < Task
             obj.J = robot.wTv(1:3,1:3) * [zeros(3,10), eye(3)];
         end
         
-        function updateActivation(obj, robot, task_status, time_elapsed, transition_time)
+        function updateActivation(obj, robot)
             % Update the task's inherent activation
             obj.A = eye(3);
-            % Update the activation depending on the task status
-            if task_status == "FADING_IN"
-                obj.A = IncreasingBellShapedFunction(0, transition_time, 0, 1, time_elapsed) * obj.A;
-            elseif task_status == "FADING_OUT"
-                obj.A = DecreasingBellShapedFunction(0, transition_time, 0, 1, time_elapsed) * obj.A;
-            end
         end
     end
 end
