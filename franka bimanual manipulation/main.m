@@ -4,7 +4,9 @@ function main()
     addpath('./tools')
     addpath('./icat')
     addpath('./tasks')
-    clc; clear; close all; 
+    close all; 
+    clear; 
+    clc; 
 
     %Simulation Parameters
     dt = 0.005;
@@ -39,8 +41,8 @@ function main()
     %Set goal frames for left and right arm, based on object frame
     
     %TO DO: Set arm goal frame based on object frame.
-    
-    linear_offset = [0.06 0 0]';
+    offset = (obj_length/2) - 0.01; % offset with a margin to not take the obj exactly at the end
+    linear_offset = [offset 0 0]';
     
     arm1.setGoal(w_obj_pos, w_obj_ori, -linear_offset, rotation(pi, -pi/6, 0));
     
@@ -62,15 +64,22 @@ function main()
     right_joint_task = JointLimitsTask("R", "RJ");
     % -----
 
+    % Task minimum altitude
+    left_min_ee_alt_task = MinEffectorAltitudeTask("L", "LMA");
+    right_min_ee_alt_task = MinEffectorAltitudeTask("R", "RMA");
 
-    
+
 
     %Actions for each phase: go to phase, coop_motion phase, end_motion phase
-    action_go_to = Action("ReachObject", {left_tool_task, right_tool_task});
+    action_go_to = Action("ReachObject", {left_tool_task, right_tool_task, ...
+                                          left_joint_task, right_joint_task ...
+                                          left_min_ee_alt_task, right_min_ee_alt_task});
 
     % order define priority { HIGHEST , ... , lowest}
     % global_list = {left_tool_task, right_tool_task};
-    global_list = {left_joint_task, right_joint_task, left_tool_task, right_tool_task};
+    global_list = {left_joint_task, right_joint_task, ...
+                   left_min_ee_alt_task, right_min_ee_alt_task, ...
+                   left_tool_task, right_tool_task};
 
     %Load Action Manager Class and load actions
     actionManager = ActionManager(dt, 14, 3);

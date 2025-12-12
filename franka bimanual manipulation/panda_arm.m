@@ -25,6 +25,7 @@ classdef panda_arm < handle
         tTo
         wJt
         wJo
+        wJe % <--- AGGIUNTO: Jacobian End Effector
         %% Sensor variables
         alt
         dist_to_goal
@@ -95,6 +96,13 @@ classdef panda_arm < handle
             % Compute Differential kinematics from the base frame to the
             % Tool Frame
             bJe = geometricJacobian(obj.robot_model.franka,[obj.q',0,0],'panda_link7');%DO NOT EDIT
+
+            % Ruota lo Jacobiano nel World Frame (wJe)
+            wRb = obj.wTb(1:3,1:3);
+            Rot_block = [wRb zeros(3,3); zeros(3,3) wRb];
+            % Salvataggio wJe 
+            obj.wJe = Rot_block * bJe(:, 1:7);
+
             Ste = [eye(3) zeros(3); -skew(obj.wTe(1:3,1:3)*obj.eTt(1:3,4)) eye(3)];
             obj.wJt = Ste * [obj.wTb(1:3,1:3) zeros(3,3); zeros(3,3) obj.wTb(1:3,1:3)] * bJe(:, 1:7);
         end
