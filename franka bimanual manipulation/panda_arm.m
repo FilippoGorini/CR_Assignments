@@ -52,7 +52,7 @@ classdef panda_arm < handle
 
             % FIXED END EFFECTOR
             % frame e = frame f = frame 8
-            psi = -44.9949;% FIXED ANGLE BETWEEN EE AND TOOL 
+            psi = -44.9949 * (pi/180);% FIXED ANGLE BETWEEN EE AND TOOL 
             tool_length = 0.2104;% FIXED DISTANCE BETWEEN EE AND TOOL
             
             eRt = YPRToRot(psi, 0, 0);
@@ -68,7 +68,12 @@ classdef panda_arm < handle
         function setGoal(obj,obj_position,obj_orientation,arm_dist_offset,arm_rot_offset)
             % Set goal positions and orientations for arm 
             obj.wTo=[[obj_orientation obj_position]; 0 0 0 1];
-            obj.wTg=[[arm_rot_offset arm_dist_offset]; 0 0 0 1];
+            %obj.wTg=[[arm_rot_offset arm_dist_offset]; 0 0 0 1]; del %template
+            
+            oTg = [[arm_rot_offset arm_dist_offset]; 0 0 0 1];
+
+            obj.wTg = obj.wTo * oTg;            
+
         end
         
         function set_obj_goal(obj,wTog)
@@ -82,9 +87,10 @@ classdef panda_arm < handle
 
             obj.bTe=getTransform(obj.robot_model.franka,[obj.q',0,0],'panda_link7');
             obj.wTe=obj.wTb*obj.bTe;
-            obj.wTt =obj.wTe;
-            
+            % obj.wTt =obj.wTe;
+            obj.wTt = obj.wTe * obj.eTt;
         end
+        
         function update_jacobian(obj)
             % Compute Differential kinematics from the base frame to the
             % Tool Frame

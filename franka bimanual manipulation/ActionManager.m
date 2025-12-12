@@ -20,14 +20,17 @@ classdef ActionManager < handle
             obj.actions{end+1} = taskStack;
         end
 
-        function [v_nu, qdot] = computeICAT(obj, robot)
+        function [qdot] = computeICAT(obj, robot)
+        % function [v_nu, qdot] = computeICAT(obj, robot)
             % Get current action
             current_tasks = obj.actions{obj.currentAction};
             previous_tasks = obj.actions{obj.previousAction};
 
             % Perform ICAT (task-priority inverse kinematics)
-            ydotbar = zeros(13,1);
-            Qp = eye(13);
+            ydotbar = zeros(14,1);
+            Qp = eye(14);
+            % ydotbar = zeros(13,1);
+            % Qp = eye(13);
 
             for i = 1:length(obj.task_set)  % Iterate on ALL of the possible tasks
 
@@ -79,11 +82,13 @@ classdef ActionManager < handle
             end
 
             % 3. Last task: residual damping
-            [~, ydotbar] = iCAT_task(eye(13), eye(13), Qp, ydotbar, zeros(13,1), 1e-4, 0.01, 10);
+            % [~, ydotbar] = iCAT_task(eye(13), eye(13), Qp, ydotbar, zeros(13,1), 1e-4, 0.01, 10);
+            [~, ydotbar] = iCAT_task(eye(14), eye(14), Qp, ydotbar, zeros(14,1), 1e-4, 0.01, 10);
 
             % 4. Split velocities for vehicle and arm
-            qdot = ydotbar(1:7);
-            v_nu = ydotbar(8:13); % projected on the vehicle frame
+            % qdot = ydotbar(1:7);
+            % v_nu = ydotbar(8:13); % projected on the vehicle frame
+            qdot = ydotbar;
 
             % 5. Increment time elapsed since last action switch
             obj.timeInCurrentAction = obj.timeInCurrentAction + obj.dt;

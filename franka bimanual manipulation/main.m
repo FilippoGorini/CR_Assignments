@@ -24,19 +24,29 @@ function main()
             0   0   1   0;
             0   0   0   1];
     arm2 = panda_arm(model, wTb2);
-
+ 
     %Initialize Bimanual Simulator Class
     bm_sim = bimanual_sim(dt, arm1, arm2, end_time);
-
+    
     %Define Object Shape and origin Frame
+
     obj_length = 0.12;
+
     w_obj_pos = [0.5 0 0.59]';
+
     w_obj_ori = rotation(0, 0, 0);
 
     %Set goal frames for left and right arm, based on object frame
+    
     %TO DO: Set arm goal frame based on object frame.
-    arm1.setGoal(w_obj_pos, w_obj_ori, w_obj_pos, rotation(0, 0, 0));
-    arm2.setGoal(w_obj_pos, w_obj_ori, w_obj_pos, rotation(0, 0, 0));
+    
+    linear_offset = [0.06 0 0]';
+    
+    arm1.setGoal(w_obj_pos, w_obj_ori, -linear_offset, rotation(pi, -pi/6, 0));
+    
+    arm2.setGoal(w_obj_pos, w_obj_ori, +linear_offset, rotation(pi, pi/6, 0));
+
+
 
     %Define Object goal frame (Cooperative Motion)
     wTog = [rotation(0, 0, 0) [0.65, -0.35, 0.28]'; 0 0 0 1];
@@ -47,11 +57,24 @@ function main()
     left_tool_task = tool_task("L", "LT");
     right_tool_task = tool_task("R", "RT");
 
+    % ----- task joint marti prova
+    left_joint_task = joint_limits_task("L", "LJ");
+    right_joint_task = joint_limits_task("R", "RJ");
+    % -----
+
+
+    
+
     %Actions for each phase: go to phase, coop_motion phase, end_motion phase
     go_to = {left_tool_task, right_tool_task};
 
+    % order define priority { HIGHEST , ... , lowest}
+    global_list = {left_tool_task, right_tool_task};
+    %global_list = {left_joint_task, right_joint_task, left_tool_task, right_tool_task};
+
     %Load Action Manager Class and load actions
     actionManager = ActionManager();
+    actionManager.addTaskSet(global_list);
     actionManager.addAction(go_to);
 
     %Initiliaze robot interface
