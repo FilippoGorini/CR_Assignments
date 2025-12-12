@@ -1,4 +1,4 @@
-classdef joint_limits_task < Task   
+classdef JointLimitsTask < Task   
     % Task per gestire i limiti di giunto del robot (Inequality Task)
     properties
         % Limiti di giunto in radianti
@@ -13,7 +13,7 @@ classdef joint_limits_task < Task
     end
     
     methods
-        function obj = joint_limits_task(robot_ID, taskID)
+        function obj = JointLimitsTask(robot_ID, taskID)
             % Costruttore: Inizializza ID e limiti del Franka Panda
             obj.ID = robot_ID;
             obj.task_name = taskID;

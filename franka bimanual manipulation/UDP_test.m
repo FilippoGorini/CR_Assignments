@@ -1,8 +1,10 @@
-hudps = dsp.UDPSender ('RemoteIPPort', 1505) ;
+hudps = dsp.UDPSender('RemoteIPPort',1505);
 hudps.RemoteIPAddress = '127.0.0.1';
-q = [0, 0, 0, 0, 0, 0, 0]';
-for t =1:0.1:30
+
+q = zeros(7,1);
+
+for t = 1:0.1:30
     disp(t);
-    step(hudps, [q; q]);
+    hudps([q; q]);   % <-- call object directly
     pause(1);
 end

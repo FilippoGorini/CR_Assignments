@@ -54,34 +54,34 @@ function main()
     arm2.set_obj_goal(wTog)
 
     %Define Tasks, input values(Robot type(L,R,BM), Task Name)
-    left_tool_task = tool_task("L", "LT");
-    right_tool_task = tool_task("R", "RT");
+    left_tool_task = ToolTask("L", "LT");
+    right_tool_task = ToolTask("R", "RT");
 
     % ----- task joint marti prova
-    left_joint_task = joint_limits_task("L", "LJ");
-    right_joint_task = joint_limits_task("R", "RJ");
+    left_joint_task = JointLimitsTask("L", "LJ");
+    right_joint_task = JointLimitsTask("R", "RJ");
     % -----
 
 
     
 
     %Actions for each phase: go to phase, coop_motion phase, end_motion phase
-    go_to = {left_tool_task, right_tool_task};
+    action_go_to = Action("ReachObject", {left_tool_task, right_tool_task});
 
     % order define priority { HIGHEST , ... , lowest}
-    global_list = {left_tool_task, right_tool_task};
-    %global_list = {left_joint_task, right_joint_task, left_tool_task, right_tool_task};
+    % global_list = {left_tool_task, right_tool_task};
+    global_list = {left_joint_task, right_joint_task, left_tool_task, right_tool_task};
 
     %Load Action Manager Class and load actions
-    actionManager = ActionManager();
+    actionManager = ActionManager(dt, 14, 3);
     actionManager.addTaskSet(global_list);
-    actionManager.addAction(go_to);
+    actionManager.addAction(action_go_to);
 
     %Initiliaze robot interface
     robot_udp = UDP_interface(real_robot);
 
     %Initialize logger
-    logger = SimulationLogger(ceil(end_time/dt)+1, bm_sim, actionManager);
+    % logger = SimulationLogger(ceil(end_time/dt)+1, bm_sim, global_list);
 
     %Main simulation Loop
     for t = 0:dt:end_time
@@ -105,7 +105,7 @@ function main()
         robot_udp.send(t, bm_sim)
 
         % 6. Logging
-        logger.update(bm_sim.time, bm_sim.loopCounter)
+        % logger.update(bm_sim.time, bm_sim.loopCounter)
         bm_sim.time
 
         % 7. Optional real-time slowdown
@@ -116,5 +116,5 @@ function main()
     %of tasks
     action = 1;
     tasks = [1];
-    logger.plotAll(action, tasks);
+    % logger.plotAll(action, tasks);
 end

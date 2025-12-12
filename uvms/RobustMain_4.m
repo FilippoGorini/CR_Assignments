@@ -8,6 +8,7 @@ clc; clear; close all;
 % Simulation parameters
 dt       = 0.05;            % Prima era 0.005
 endTime  = 200;
+trans_duration = 5;         % 5 s transition duration between actions
 % Initialize robot model and simulator
 robotModel = UvmsModel(); 
 % Set initial conditions
@@ -27,8 +28,12 @@ task_altitude_landing = TaskAltitudeControl(0);
 task_altitude_landing.set_h_star(0);
 
 % Define actions and add to ActionManager
-action_safe_navigation = {task_altitude_min, task_vehicle_pos, task_vehicle_orient, task_horizontal_att};
-action_landing = {task_altitude_landing, task_vehicle_pos, task_horizontal_att};
+action_safe_navigation = Action("SafeNavigation", ...
+    {task_altitude_min, task_vehicle_pos, task_vehicle_orient, task_horizontal_att});
+
+action_landing = Action("Landing", ...
+    {task_altitude_landing, task_vehicle_pos, task_horizontal_att});
+
 % The priorities now are defined by the order in the global_task_set, not
 % in the single actions anymore
 global_task_set = {task_altitude_min, ...       
@@ -38,11 +43,11 @@ global_task_set = {task_altitude_min, ...
                             task_horizontal_att};
 
 % Define ActionManager and add global_task_set and actions
-actionManager = ActionManager();
-actionManager.addTaskSet(global_task_set)
+actionManager = ActionManager(dt, 13, trans_duration);
+actionManager.addTaskSet(global_task_set);
 actionManager.addAction(action_safe_navigation); 
 actionManager.addAction(action_landing); 
-actionManager.currentAction(1);         % Set initial action
+actionManager.setCurrentAction("SafeNavigation");         % Set initial action
 
 
 % Define desired positions and orientations (world frame)
@@ -73,7 +78,7 @@ for step = 1:sim.maxSteps
        norm(vehicle_lin_error) < lin_error_threshold && ...
        is_landing == false 
         
-        actionManager.setCurrentAction(2);
+        actionManager.setCurrentAction("Landing");
         is_landing = true; 
     end
 
@@ -101,6 +106,7 @@ for step = 1:sim.maxSteps
     if mod(sim.loopCounter, round(1 / sim.dt)) == 0
         fprintf('t = %.2f s\n', sim.time);
         fprintf('alt = %.2f m\n', robotModel.altitude);
+        % if actionManager.actions(action)
         if is_landing == false
             disp('Current action: Safe Navigation')
             fprintf('Vehicle position error = %.8f m\n', norm(vehicle_lin_error));
