@@ -5,10 +5,12 @@ classdef ToolTask < Task
     end
 
     methods
+
         function obj=ToolTask(robot_ID,taskID)
             obj.ID=robot_ID;
             obj.task_name=taskID;
         end
+
         function updateReference(obj, robot_system)
             if(obj.ID=='L')
                 robot=robot_system.left_arm;
@@ -23,6 +25,7 @@ classdef ToolTask < Task
          obj.xdotbar(1:3) = Saturate(obj.xdotbar(1:3), 0.3);
          obj.xdotbar(4:6) = Saturate(obj.xdotbar(4:6), 0.3);
         end
+        
         function updateJacobian(obj,robot_system)
             if(obj.ID=='L')
                 robot=robot_system.left_arm;

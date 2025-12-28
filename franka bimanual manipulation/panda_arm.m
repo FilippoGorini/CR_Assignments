@@ -22,9 +22,10 @@ classdef panda_arm < handle
         wTog
         wTo
         robot_type
-        tTo
+        tTo     % Not defined at the beginning, must be set with set_grasp_transform
         wJt
-        wJo
+        wJo % Jacobian of object's frame: this is our new control point once the manipulators grasp the object
+        % wJo is not defined in the beginning, until we have tTo available
         wJe % <--- AGGIUNTO: Jacobian End Effector
         %% Sensor variables
         alt
@@ -63,7 +64,12 @@ classdef panda_arm < handle
             obj.eTt = [eRt,         eOt;
                        zeros(1,3),  1];
             obj.wTt = obj.wTe * obj.eTt;
-          
+
+            % Initialize tTo, wTo and wJo to avoid dimension problems at startup
+            obj.tTo = zeros(4,4);
+            obj.wTo = zeros(4,4);
+            obj.wJo = zeros(6,7);
+
         end
 
         function setGoal(obj,obj_position,obj_orientation,arm_dist_offset,arm_rot_offset)
@@ -77,11 +83,15 @@ classdef panda_arm < handle
 
         end
         
+        function set_grasp_transform(obj, tTo_val)
+             obj.tTo = tTo_val;
+             % obj.wTo = obj.wTt * obj.tTo;
+        end
+
         function set_obj_goal(obj,wTog)
             % Set goal positions and orientations for the object
             obj.wTog = wTog;
         end
-
 
         function update_transform(obj)
             % Compute forward kinematics of the robot
@@ -90,6 +100,9 @@ classdef panda_arm < handle
             obj.wTe=obj.wTb*obj.bTe;
             % obj.wTt =obj.wTe;
             obj.wTt = obj.wTe * obj.eTt;
+            if ~isempty(obj.tTo)
+                obj.wTo = obj.wTt * obj.tTo;
+            end
         end
         
         function update_jacobian(obj)
@@ -102,9 +115,29 @@ classdef panda_arm < handle
             Rot_block = [wRb zeros(3,3); zeros(3,3) wRb];
             % Salvataggio wJe 
             obj.wJe = Rot_block * bJe(:, 1:7);
+            w_r_et = obj.wTe(1:3,1:3) * obj.eTt(1:3,4);
+            % NB: we renamed Ste to Set to follow naming convention
+            Set = [eye(3) zeros(3); -skew(w_r_et) eye(3)];
+            obj.wJt = Set * obj.wJe;
+            % obj.wJt = Ste * [obj.wTb(1:3,1:3) zeros(3,3); zeros(3,3) obj.wTb(1:3,1:3)] * bJe(:, 1:7);
+            
+            % We update the jacobian of the object only once we set the
+            % transform of the object wrt to the tool (tTo)
+            if ~isempty(obj.tTo)
+                % w_r_to is vector from Tool to Object in World Frame
+                % wRt * tP_o
+                w_r_to = obj.wTt(1:3,1:3) * obj.tTo(1:3,4);
+                
+                % Twist transformation matrix from Tool to Object
+                % [ I   0 ]
+                % [ -S(r) I ]
+                Sto = [eye(3) zeros(3); -skew(w_r_to) eye(3)];
+                
+                obj.wJo = Sto * obj.wJt;
+            end
 
-            Ste = [eye(3) zeros(3); -skew(obj.wTe(1:3,1:3)*obj.eTt(1:3,4)) eye(3)];
-            obj.wJt = Ste * [obj.wTb(1:3,1:3) zeros(3,3); zeros(3,3) obj.wTb(1:3,1:3)] * bJe(:, 1:7);
+
+
         end
     end
 end

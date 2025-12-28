@@ -11,6 +11,11 @@ function main()
     %Simulation Parameters
     dt = 0.005;
     end_time = 20;
+    is_reaching_phase = true;
+
+    % Thresholds
+    ang_error_threshold = 0.02;
+    lin_error_threshold = 0.05;
 
     % Initialize Franka Emika Panda Model
     model = load("panda.mat");
@@ -50,7 +55,7 @@ function main()
 
 
 
-    %Define Object goal frame (Cooperative Motion)
+    % Define Object goal frame (Cooperative Motion)
     wTog = [rotation(0, 0, 0) [0.65, -0.35, 0.28]'; 0 0 0 1];
     arm1.set_obj_goal(wTog)
     arm2.set_obj_goal(wTog)
@@ -59,32 +64,43 @@ function main()
     left_tool_task = ToolTask("L", "LT");
     right_tool_task = ToolTask("R", "RT");
 
-    % ----- task joint marti prova
+    % Task joint limits
     left_joint_task = JointLimitsTask("L", "LJ");
     right_joint_task = JointLimitsTask("R", "RJ");
-    % -----
-
+ 
     % Task minimum altitude
     left_min_ee_alt_task = MinEffectorAltitudeTask("L", "LMA");
     right_min_ee_alt_task = MinEffectorAltitudeTask("R", "RMA");
 
+    % Task object kinematic constraint (unique for both arms)
+    kin_constraint_task = KinConstraintTask();
 
+    % Task object
+    % object_master_slave_task = ObjectTaskMasterSlave("L", "LO"); 
+    object_symmetric_task = ObjectTaskSymmetric("L", "LO");
 
     %Actions for each phase: go to phase, coop_motion phase, end_motion phase
     action_go_to = Action("ReachObject", {left_tool_task, right_tool_task, ...
                                           left_joint_task, right_joint_task ...
                                           left_min_ee_alt_task, right_min_ee_alt_task});
+    action_move_obj = Action("MoveObject", {kin_constraint_task, ...
+                                            left_joint_task, right_joint_task ...
+                                            left_min_ee_alt_task, right_min_ee_alt_task, ...
+                                            object_symmetric_task});
 
     % order define priority { HIGHEST , ... , lowest}
     % global_list = {left_tool_task, right_tool_task};
-    global_list = {left_joint_task, right_joint_task, ...
+    global_list = {kin_constraint_task, ...
+                   left_joint_task, right_joint_task, ...
                    left_min_ee_alt_task, right_min_ee_alt_task, ...
-                   left_tool_task, right_tool_task};
+                   left_tool_task, right_tool_task, ...
+                   object_symmetric_task};
 
     %Load Action Manager Class and load actions
     actionManager = ActionManager(dt, 14, 3);
     actionManager.addTaskSet(global_list);
     actionManager.addAction(action_go_to);
+    actionManager.addAction(action_move_obj);
 
     %Initiliaze robot interface
     robot_udp = UDP_interface(real_robot);
@@ -94,6 +110,7 @@ function main()
 
     %Main simulation Loop
     for t = 0:dt:end_time
+
         % 1. Receive UDP packets - DO NOT EDIT
         [ql, qr] = robot_udp.udp_receive(t);
         if real_robot == true %Only in real setup, assign current robot configuration as initial configuratio
@@ -103,6 +120,53 @@ function main()
 
         % 2. Update Full kinematics of the bimanual system
         bm_sim.update_full_kinematics();
+
+
+        if is_reaching_phase
+            
+            % Compute vectors first
+            [l_err_ori, l_err_lin] = CartError(arm1.wTg , arm1.wTt);
+            [r_err_ori, r_err_lin] = CartError(arm2.wTg , arm2.wTt);
+            
+            % Compute norms separately
+            left_ang_error = norm(l_err_ori);
+            left_lin_error = norm(l_err_lin);
+            right_ang_error = norm(r_err_ori);
+            right_lin_error = norm(r_err_lin);
+            
+            % Check Thresholds
+            if (left_ang_error < ang_error_threshold) && (left_lin_error < lin_error_threshold) && ...
+               (right_ang_error < ang_error_threshold) && (right_lin_error < lin_error_threshold)
+               
+                disp(['Target Reached at t = ' num2str(t) '. Switching to MoveObject.']);
+                
+                % --- TRANSITION LOGIC (Run Once) ---
+                
+                % 1. Define Actual Object Frame (from simulation setup constants)
+                wTo_obj = [w_obj_ori, w_obj_pos; 0 0 0 1];
+                
+                % 2. Compute Relative Grasp Transforms (tTo)
+                % Using your invT function
+                tTo_L = invT(arm1.wTt) * wTo_obj;
+                tTo_R = invT(arm2.wTt) * wTo_obj;
+                
+                % 3. Set the grasp transforms in the robot objects
+                arm1.set_grasp_transform(tTo_L);
+                arm2.set_grasp_transform(tTo_R);
+            
+                arm1.update_transform();
+                arm2.update_transform();
+
+                arm1.update_jacobian();
+                arm2.update_jacobian();
+                
+                % 4. Switch Action
+                actionManager.setCurrentAction("MoveObject");
+                
+                % 5. Update flag to stop checking this condition
+                is_reaching_phase = false; 
+            end
+        end
 
         % 3. Compute control commands for current action
         [q_dot] = actionManager.computeICAT(bm_sim);

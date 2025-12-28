@@ -81,7 +81,7 @@ classdef ActionManager < handle
             Qp = eye(obj.num_dofs);
 
             for i = 1:length(obj.task_set)  % Iterate on ALL of the possible tasks
-
+                
                 % Extract task
                 task = obj.task_set{i};
 
@@ -93,26 +93,34 @@ classdef ActionManager < handle
                 inPrevious = false;
                 for k = 1:length(previous_tasks)
                     if task == previous_tasks{k}, inPrevious = true; break; end
-                end
-                
+                end          
+
                 % Determine task transition activation based on task status
                 trans_act = 0;
                 if ~inPrevious && inCurrent
-                    trans_act = IncreasingBellShapedFunction(0, ...
-                                                            obj.transitionDuration, ...
-                                                            0, ...
-                                                            1, ...
-                                                            obj.timeInCurrentAction);
+                    if task.is_kin_constraint
+                        trans_act = 1;
+                    else
+                        trans_act = IncreasingBellShapedFunction(0, ...
+                                                                obj.transitionDuration, ...
+                                                                0, ...
+                                                                1, ...
+                                                                obj.timeInCurrentAction);
+                    end
                 elseif inPrevious && ~inCurrent
-                    trans_act = DecreasingBellShapedFunction(0, ...
-                                                            obj.transitionDuration, ...
-                                                            0, ...
-                                                            1, ...
-                                                            obj.timeInCurrentAction);
+                    if task.is_kin_constraint
+                        trans_act = 0;
+                    else
+                        trans_act = DecreasingBellShapedFunction(0, ...
+                                                                obj.transitionDuration, ...
+                                                                0, ...
+                                                                1, ...
+                                                                obj.timeInCurrentAction);
+                    end
                 elseif inPrevious && inCurrent
                     trans_act = 1;
                 end
-                
+
                 % Update task
                 task.updateReference(robot);
                 task.updateJacobian(robot);
