@@ -29,8 +29,8 @@ classdef panda_arm < handle
         wJe % <--- AGGIUNTO: Jacobian End Effector
         %% Sensor variables
         alt
-        dist_to_goal
-        rot_to_goal
+        dist_to_goal = 1000 % big default value at start to ensure we don't think to have reached the goal already until they're not calculated
+        rot_to_goal = 1000
     end
 
     methods
@@ -119,7 +119,7 @@ classdef panda_arm < handle
             % NB: we renamed Ste to Set to follow naming convention
             Set = [eye(3) zeros(3); -skew(w_r_et) eye(3)];
             obj.wJt = Set * obj.wJe;
-            % obj.wJt = Ste * [obj.wTb(1:3,1:3) zeros(3,3); zeros(3,3) obj.wTb(1:3,1:3)] * bJe(:, 1:7);
+            % obj.wJt = Set * [obj.wTb(1:3,1:3) zeros(3,3); zeros(3,3) obj.wTb(1:3,1:3)] * bJe(:, 1:7);
             
             % We update the jacobian of the object only once we set the
             % transform of the object wrt to the tool (tTo)

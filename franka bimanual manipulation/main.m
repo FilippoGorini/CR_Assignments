@@ -10,12 +10,19 @@ function main()
 
     %Simulation Parameters
     dt = 0.005;
-    end_time = 20;
+    end_time = 40;
     is_reaching_phase = true;
+    is_moving_phase = false;
+    is_stopped = false;
+
+    action_transition_duration = 1;     % 1 second 
+    n_dofs = 14;
 
     % Thresholds
     ang_error_threshold = 0.02;
-    lin_error_threshold = 0.05;
+    lin_error_threshold = 0.001;
+    obj_ang_error_threshold = 0.02;
+    obj_lin_error_threshold = 0.001;
 
     % Initialize Franka Emika Panda Model
     model = load("panda.mat");
@@ -76,31 +83,34 @@ function main()
     kin_constraint_task = KinConstraintTask();
 
     % Task object
-    % object_master_slave_task = ObjectTaskMasterSlave("L", "LO"); 
-    object_symmetric_task = ObjectTaskSymmetric("L", "LO");
+    object_task = ObjectTaskMasterSlave("L", "LO"); 
+    % object_task = ObjectTaskSymmetric("L", "LO");
 
     %Actions for each phase: go to phase, coop_motion phase, end_motion phase
     action_go_to = Action("ReachObject", {left_tool_task, right_tool_task, ...
-                                          left_joint_task, right_joint_task ...
+                                          left_joint_task, right_joint_task, ...
                                           left_min_ee_alt_task, right_min_ee_alt_task});
     action_move_obj = Action("MoveObject", {kin_constraint_task, ...
-                                            left_joint_task, right_joint_task ...
+                                            left_joint_task, right_joint_task, ...
                                             left_min_ee_alt_task, right_min_ee_alt_task, ...
-                                            object_symmetric_task});
+                                            object_task});
+    action_stop = Action("Stop", {left_joint_task, right_joint_task, ...
+                                  left_min_ee_alt_task, right_min_ee_alt_task});
 
     % order define priority { HIGHEST , ... , lowest}
     % global_list = {left_tool_task, right_tool_task};
     global_list = {kin_constraint_task, ...
                    left_joint_task, right_joint_task, ...
                    left_min_ee_alt_task, right_min_ee_alt_task, ...
-                   left_tool_task, right_tool_task, ...
-                   object_symmetric_task};
+                   object_task, ...
+                   left_tool_task, right_tool_task};
 
     %Load Action Manager Class and load actions
-    actionManager = ActionManager(dt, 14, 3);
+    actionManager = ActionManager(dt, n_dofs, action_transition_duration);
     actionManager.addTaskSet(global_list);
     actionManager.addAction(action_go_to);
     actionManager.addAction(action_move_obj);
+    actionManager.addAction(action_stop);
 
     %Initiliaze robot interface
     robot_udp = UDP_interface(real_robot);
@@ -122,17 +132,12 @@ function main()
         bm_sim.update_full_kinematics();
 
 
-        if is_reaching_phase
-            
-            % Compute vectors first
-            [l_err_ori, l_err_lin] = CartError(arm1.wTg , arm1.wTt);
-            [r_err_ori, r_err_lin] = CartError(arm2.wTg , arm2.wTt);
-            
-            % Compute norms separately
-            left_ang_error = norm(l_err_ori);
-            left_lin_error = norm(l_err_lin);
-            right_ang_error = norm(r_err_ori);
-            right_lin_error = norm(r_err_lin);
+        if is_reaching_phase    
+          
+            left_ang_error = norm(arm1.rot_to_goal)
+            left_lin_error = norm(arm1.dist_to_goal);
+            right_ang_error = norm(arm2.rot_to_goal)
+            right_lin_error = norm(arm2.dist_to_goal);
             
             % Check Thresholds
             if (left_ang_error < ang_error_threshold) && (left_lin_error < lin_error_threshold) && ...
@@ -165,6 +170,34 @@ function main()
                 
                 % 5. Update flag to stop checking this condition
                 is_reaching_phase = false; 
+                is_moving_phase = true;
+
+                % 6. We now "forget" the table and set the ground (z=0) as
+                % the obstacle
+                left_min_ee_alt_task.setObstacleHeight(0);
+                right_min_ee_alt_task.setObstacleHeight(0);
+            end
+        end
+
+        if is_moving_phase
+            % NB: for now we just check only the left arm's object frame
+            % Compute vectors first
+            [obj_err_ori, obj_err_lin] = CartError(arm1.wTog , arm1.wTo);
+
+            % Compute norms separately
+            obj_ang_error = norm(obj_err_ori)
+            obj_lin_error = norm(obj_err_lin)
+
+            % Check Thresholds
+            if (obj_ang_error < obj_ang_error_threshold) && (obj_lin_error < obj_lin_error_threshold)
+
+                disp(['Object moved to position at t = ' num2str(t) '. Switching to Stop.']);
+
+                % Switch to stop action
+                actionManager.setCurrentAction("Stop");
+
+                is_moving_phase = false;
+                is_stopped = true;
             end
         end
 
@@ -179,10 +212,10 @@ function main()
 
         % 6. Logging
         % logger.update(bm_sim.time, bm_sim.loopCounter)
-        bm_sim.time
+        bm_sim.time;
 
         % 7. Optional real-time slowdown
-        % SlowdownToRealtime(dt);
+        SlowdownToRealtime(dt);
     end
 
     %Display joint position and velocity, Display for a given action, a number
