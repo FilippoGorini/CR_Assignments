@@ -174,12 +174,28 @@ function main()
 
                 % 6. We now "forget" the table and set the ground (z=0) as
                 % the obstacle
-                left_min_ee_alt_task.setObstacleHeight(0);
-                right_min_ee_alt_task.setObstacleHeight(0);
+                % left_min_ee_alt_task.setObstacleHeight(0);
+                % right_min_ee_alt_task.setObstacleHeight(0);
             end
         end
 
         if is_moving_phase
+
+            % Actual x position of the arm
+            current_obj_x = arm1.wTo(1,4); 
+            
+            % x threshold, after this limit manipulators can lower towards the target pos
+            table_edge_threshold = 0.58; 
+        
+            % If we go over the edge of the table we can start to go down
+            % To achieve this we need to put 0 the obstacle height in minimum altitude task
+            if current_obj_x > table_edge_threshold
+                left_min_ee_alt_task.setObstacleHeight(0);
+                right_min_ee_alt_task.setObstacleHeight(0);
+                disp("Table edge reached: obstacle height is now set to 0.")
+            end
+
+
             % NB: for now we just check only the left arm's object frame
             % Compute vectors first
             [obj_err_ori, obj_err_lin] = CartError(arm1.wTog , arm1.wTo);
@@ -197,9 +213,11 @@ function main()
                 actionManager.setCurrentAction("Stop");
 
                 is_moving_phase = false;
-                is_stopped = true;
+                % is_stopped = true;
             end
         end
+
+        
 
         % 3. Compute control commands for current action
         [q_dot] = actionManager.computeICAT(bm_sim);

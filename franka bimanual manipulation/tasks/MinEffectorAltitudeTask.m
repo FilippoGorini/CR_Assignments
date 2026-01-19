@@ -4,8 +4,15 @@ classdef MinEffectorAltitudeTask < Task
         buffer = 0.05;      % Buffer zone size         
         h_star;             % Target altitude when task activates 
         h_current;          % Current altitude relative to obstacle     
+        
         h_obstacle = 0.55;  % Height of the obstacle (table) from ground (World Z=0)
-        gain = 1.0;       
+        h_obstacle_start = 0.55;     
+        h_obstacle_target = 0.55;               
+
+        transition_duration = 1.0;  % for the obstacle altitude change (0.55 -> 0)
+        time_since_change = 1.0;    % Timer 
+
+        gain = 1.0;
     end
     
     methods
@@ -17,10 +24,35 @@ classdef MinEffectorAltitudeTask < Task
         
         % Method to change obstacle height at runtime
         function setObstacleHeight(obj, new_height)
-            obj.h_obstacle = new_height;
+            obj.h_obstacle_start = obj.h_obstacle;
+            obj.h_obstacle_target = new_height;
+            % obj.h_obstacle = new_height;
+            obj.time_since_change = 0;
         end
         
         function updateReference(obj, robot_system)
+
+            % Logic to manage a smooth transition from 0.55 to 0 obstacle
+            if obj.time_since_change < obj.transition_duration
+                if obj.h_obstacle_start > obj.h_obstacle_target
+                    obj.h_obstacle = DecreasingBellShapedFunction(0, ...
+                                                                  obj.transition_duration, ...
+                                                                  obj.h_obstacle_start, ...
+                                                                  obj.h_obstacle_target, ...
+                                                                  obj.time_since_change);
+                    obj.time_since_change = obj.time_since_change + robot_system.dt;
+                else
+                    obj.h_obstacle = IncreasingBellShapedFunction(0, ...
+                                                                  obj.transition_duration, ...
+                                                                  obj.h_obstacle_start, ...
+                                                                  obj.h_obstacle_target, ...
+                                                                  obj.time_since_change);
+                    obj.time_since_change = obj.time_since_change + robot_system.dt;
+                end
+            else
+                obj.h_obstacle = obj.h_obstacle_target;
+            end
+
             % 1. Select the correct arm
             if(obj.ID == 'L')
                 robot = robot_system.left_arm;
