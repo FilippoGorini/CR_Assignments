@@ -9,7 +9,7 @@ classdef MinEffectorAltitudeTask < Task
         h_obstacle_start = 0.55;     
         h_obstacle_target = 0.55;               
 
-        transition_duration = 1.0;  % for the obstacle altitude change (0.55 -> 0)
+        transition_duration = 3.0;  % for the obstacle altitude change (0.55 -> 0)
         time_since_change = 1.0;    % Timer 
 
         gain = 1.0;
@@ -52,6 +52,7 @@ classdef MinEffectorAltitudeTask < Task
             else
                 obj.h_obstacle = obj.h_obstacle_target;
             end
+            
 
             % 1. Select the correct arm
             if(obj.ID == 'L')
@@ -65,7 +66,7 @@ classdef MinEffectorAltitudeTask < Task
             
             % 3. Calculate Velocity Reference        
             obj.xdotbar = obj.gain * (obj.h_star - obj.h_current);
-            
+
             % 4. Saturate velocity for safety
             obj.xdotbar = Saturate(obj.xdotbar, 0.2); 
         end

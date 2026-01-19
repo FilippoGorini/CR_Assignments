@@ -14,6 +14,7 @@ function main()
     is_reaching_phase = true;
     is_moving_phase = false;
     is_stopped = false;
+    done = 0;
 
     action_transition_duration = 1;     % 1 second 
     n_dofs = 14;
@@ -116,7 +117,7 @@ function main()
     robot_udp = UDP_interface(real_robot);
 
     %Initialize logger
-    % logger = SimulationLogger(ceil(end_time/dt)+1, bm_sim, global_list);
+    logger = SimulationLogger(ceil(end_time/dt)+1, bm_sim, global_list);
 
     %Main simulation Loop
     for t = 0:dt:end_time
@@ -134,9 +135,9 @@ function main()
 
         if is_reaching_phase    
           
-            left_ang_error = norm(arm1.rot_to_goal)
+            left_ang_error = norm(arm1.rot_to_goal);
             left_lin_error = norm(arm1.dist_to_goal);
-            right_ang_error = norm(arm2.rot_to_goal)
+            right_ang_error = norm(arm2.rot_to_goal);
             right_lin_error = norm(arm2.dist_to_goal);
             
             % Check Thresholds
@@ -189,10 +190,12 @@ function main()
         
             % If we go over the edge of the table we can start to go down
             % To achieve this we need to put 0 the obstacle height in minimum altitude task
-            if current_obj_x > table_edge_threshold
+            if current_obj_x > table_edge_threshold && not(done)
                 left_min_ee_alt_task.setObstacleHeight(0);
                 right_min_ee_alt_task.setObstacleHeight(0);
-                disp("Table edge reached: obstacle height is now set to 0.")
+                done = 1;
+                disp(['t = ' num2str(t)]);
+                %disp("Table edge reached: obstacle height is now set to 0.")
             end
 
 
@@ -201,8 +204,8 @@ function main()
             [obj_err_ori, obj_err_lin] = CartError(arm1.wTog , arm1.wTo);
 
             % Compute norms separately
-            obj_ang_error = norm(obj_err_ori)
-            obj_lin_error = norm(obj_err_lin)
+            obj_ang_error = norm(obj_err_ori);
+            obj_lin_error = norm(obj_err_lin);
 
             % Check Thresholds
             if (obj_ang_error < obj_ang_error_threshold) && (obj_lin_error < obj_lin_error_threshold)
@@ -213,10 +216,13 @@ function main()
                 actionManager.setCurrentAction("Stop");
 
                 is_moving_phase = false;
-                % is_stopped = true;
+                is_stopped = true;
             end
         end
-
+    
+        if is_stopped 
+            disp("MISSION COMPLETED");
+        end
         
 
         % 3. Compute control commands for current action
@@ -229,7 +235,7 @@ function main()
         robot_udp.send(t, bm_sim)
 
         % 6. Logging
-        % logger.update(bm_sim.time, bm_sim.loopCounter)
+        logger.update(bm_sim.time, bm_sim.loopCounter)
         bm_sim.time;
 
         % 7. Optional real-time slowdown
@@ -240,5 +246,6 @@ function main()
     %of tasks
     action = 1;
     tasks = [1];
-    % logger.plotAll(action, tasks);
+    %logger.plotAll(action, tasks);
+    logger.plotAll();
 end

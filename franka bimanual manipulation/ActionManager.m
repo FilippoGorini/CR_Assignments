@@ -144,7 +144,7 @@ classdef ActionManager < handle
             qdot = ydotbar;
 
             % Increment time elapsed since last action switch
-            obj.timeInCurrentAction = obj.timeInCurrentAction + obj.dt;
+            obj.timeInCurrentAction = obj.timeInCurrentAction + obj.dt;  % better use robot.dt
 
         end
 
