@@ -9,10 +9,10 @@ classdef MinEffectorAltitudeTask < Task
         h_obstacle_start = 0.55;     
         h_obstacle_target = 0.55;               
 
-        transition_duration = 3.0;  % for the obstacle altitude change (0.55 -> 0)
-        time_since_change = 1.0;    % Timer 
+        transition_duration = 0.1;  % for the obstacle altitude change (0.55 -> 0)
+        time_since_change = 0;    % Timer 
 
-        gain = 1.0;
+        gain = 0.1;
     end
     
     methods

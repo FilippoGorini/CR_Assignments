@@ -1,4 +1,4 @@
-classdef JointLimitsTask < Task   
+classdef JointLimitsIndividualTask < Task   
     % Task per gestire i limiti di giunto del robot (Inequality Task)
     properties
         % Limiti di giunto in radianti
@@ -13,7 +13,7 @@ classdef JointLimitsTask < Task
     end
     
     methods
-        function obj = JointLimitsTask(robot_ID, taskID)
+        function obj = JointLimitsIndividualTask(robot_ID, taskID)
             % Costruttore: Inizializza ID e limiti del Franka Panda
             obj.ID = robot_ID;
             obj.task_name = taskID;
@@ -23,8 +23,8 @@ classdef JointLimitsTask < Task
             
             % Limiti dal Datasheet Franka Emika Panda
             % A1, A2, A3, A4, A5, A6, A7
-            limits_deg_min = [-166, -101, -166, -176, -166,  -1, -166, -166, -101, -166, -176, -166,  -1, -166];
-            limits_deg_max = [ 166,  101,  166,   -4,  166, 215,  166, 166,  101,  166,   -4,  166, 215,  166];
+            limits_deg_min = [-166, -101, -166, -176, -166,  -1, -166];
+            limits_deg_max = [ 166,  101,  166,   -4,  166, 215,  166];
             
             obj.q_min = limits_deg_min' * deg2rad;
             obj.q_max = limits_deg_max' * deg2rad;
@@ -34,20 +34,18 @@ classdef JointLimitsTask < Task
         end
         
         function updateReference(obj, robot_system)
-            % % Seleziona il braccio corretto
-            % if(obj.ID == 'L')
-            %     robot = robot_system.left_arm;
-            % elseif(obj.ID == 'R')
-            %     robot = robot_system.right_arm;    
-            % end
+            % Seleziona il braccio corretto
+            if(obj.ID == 'L')
+                robot = robot_system.left_arm;
+            elseif(obj.ID == 'R')
+                robot = robot_system.right_arm;    
+            end
             
-            q_l = robot_system.left_arm.q;
-            q_r = robot_system.right_arm.q;
-            q = [q_l; q_r];
-            obj.xdotbar = zeros(14,1); % Inizializza velocità riferimento a zero
+            q = robot.q;
+            obj.xdotbar = zeros(7,1); % Inizializza velocità riferimento a zero
             
             % Calcola la velocità repulsiva per ogni giunto
-            for i = 1:14
+            for i = 1:7
                 % CASO 1: Vicino al limite MINIMO
                 if q(i) < (obj.q_min(i) + obj.buffer_zone)
                     % Obiettivo: tornare verso il buffer
@@ -70,31 +68,28 @@ classdef JointLimitsTask < Task
             % Il Jacobiano per i joint limits è semplicemente una matrice Identità
             % (vogliamo controllare direttamente qdot).
             
-            obj.J = eye(14);
-            % % Costruiamo il Jacobiano esteso per il sistema (14 DOF)
-            % if obj.ID == 'L'
-            %     % Parte sinistra Identity, parte destra Zeri
-            %     obj.J = [eye(7), zeros(7,7)];
-            % elseif obj.ID == 'R'
-            %     % Parte sinistra Zeri, parte destra Identity
-            %     obj.J = [zeros(7,7), eye(7)];
-            % end
+            % Costruiamo il Jacobiano esteso per il sistema (14 DOF)
+            if obj.ID == 'L'
+                % Parte sinistra Identity, parte destra Zeri
+                obj.J = [eye(7), zeros(7,7)];
+            elseif obj.ID == 'R'
+                % Parte sinistra Zeri, parte destra Identity
+                obj.J = [zeros(7,7), eye(7)];
+            end
         end
 
         function updateActivation(obj, robot_system)
-            % % Seleziona il braccio
-            % if(obj.ID == 'L')
-            %     robot = robot_system.left_arm;
-            % elseif(obj.ID == 'R')
-            %     robot = robot_system.right_arm;    
-            % end
+            % Seleziona il braccio
+            if(obj.ID == 'L')
+                robot = robot_system.left_arm;
+            elseif(obj.ID == 'R')
+                robot = robot_system.right_arm;    
+            end
             
-            q_l = robot_system.left_arm.q;
-            q_r = robot_system.right_arm.q;
-            q = [q_l; q_r];
-            activations = zeros(1,14);
+            q = robot.q;
+            activations = zeros(1,7);
             
-            for i = 1:14
+            for i = 1:7
                 alpha_low = 0;
                 alpha_high = 0;
                 
